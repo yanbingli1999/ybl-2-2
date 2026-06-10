@@ -29,8 +29,24 @@ export interface VehicleState {
 
 export type OrderStatus = 'available' | 'accepted' | 'pickedup' | 'delivering' | 'completed' | 'failed';
 
+export type OrderType = 'normal' | 'emergency';
+
+export type MedicineQuality = 'excellent' | 'good' | 'acceptable' | 'poor' | 'spoiled';
+
+export interface MedicalBoxState {
+  temperature: number;
+  targetTemperature: number;
+  temperatureTolerance: number;
+  shockDamage: number;
+  maxShockDamage: number;
+  integrity: number;
+  maxIntegrity: number;
+  quality: MedicineQuality;
+}
+
 export interface Order {
   id: string;
+  type: OrderType;
   pickupLocation: Position & { name: string };
   deliveryLocation: Position & { name: string };
   reward: number;
@@ -40,6 +56,7 @@ export interface Order {
   customerUrgency: number;
   distance: number;
   createdAt: number;
+  medicalBox?: MedicalBoxState;
 }
 
 export type WeatherType = 'sunny' | 'cloudy' | 'rainy' | 'heavy_rain' | 'storm';
@@ -92,11 +109,15 @@ export interface MapData {
 export interface IncomeRecord {
   id: string;
   orderId: string;
+  orderType: OrderType;
   baseReward: number;
   latePenalty: number;
   bonus: number;
+  qualityPenalty: number;
+  qualityBonus: number;
   finalAmount: number;
   rating: number;
+  medicineQuality?: MedicineQuality;
   completedAt: number;
   details: string;
 }

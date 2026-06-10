@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { GameState, GameAction, GameSave, Order } from '../game/types';
 import { generateMapData, findPath } from '../game/mapData';
-import { generateOrder, updateOrderDeadlines, isAtLocation, canAcceptOrder } from '../game/OrderSystem';
+import { generateOrder, updateOrderDeadlines, isAtLocation, canAcceptOrder, updateMedicalBox } from '../game/OrderSystem';
 import { updateWeather, createInitialWeather } from '../game/WeatherSystem';
 import {
   moveVehicle,
@@ -217,6 +217,35 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
       newState.orders = updateOrderDeadlines(newState.orders, action.deltaTime);
       newState.weather = updateWeather(newState.weather, action.deltaTime);
+
+      const currentOrderForBox = newState.orders.find((o) => o.id === newState.player.currentOrderId);
+      if (currentOrderForBox && currentOrderForBox.type === 'emergency' && currentOrderForBox.medicalBox) {
+        const isMoving = newState.vehicle.speed > 0;
+        const isDelivering = currentOrderForBox.status === 'pickedup' || currentOrderForBox.status === 'delivering';
+        const isPickingUp = currentOrderForBox.status === 'accepted';
+
+        if (isDelivering || isPickingUp) {
+          const elapsedRatio = 1 - (currentOrderForBox.deadline / currentOrderForBox.maxDeadline);
+          const detourFactor = 1 + Math.max(0, elapsedRatio - 0.5) * 0.5;
+
+          newState.orders = newState.orders.map((o) => {
+            if (o.id === currentOrderForBox.id && o.medicalBox) {
+              return {
+                ...o,
+                medicalBox: updateMedicalBox(
+                  o.medicalBox,
+                  newState.weather,
+                  newState.vehicle,
+                  isMoving,
+                  action.deltaTime,
+                  detourFactor
+                ),
+              };
+            }
+            return o;
+          });
+        }
+      }
 
       if (newState.isCharging) {
         const { vehicle, cost } = chargeVehicle(newState.vehicle, action.deltaTime);

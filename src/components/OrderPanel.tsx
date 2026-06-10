@@ -1,8 +1,8 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, selectCurrentOrder, selectAvailableOrders } from '../store/gameStore';
-import { getOrderStatusText, getUrgencyText } from '../game/OrderSystem';
+import { getOrderStatusText, getUrgencyText, getQualityText, getQualityColor } from '../game/OrderSystem';
 import { formatMoney } from '../game/EconomySystem';
-import { Package, MapPin, Clock, AlertTriangle, Check } from 'lucide-react';
+import { Package, MapPin, Clock, AlertTriangle, Check, Thermometer, Shield, Activity } from 'lucide-react';
 
 export default function OrderPanel() {
   const dispatch = useGameStore((state) => state.dispatch);
@@ -29,14 +29,49 @@ export default function OrderPanel() {
     dispatch({ type: 'ACCEPT_ORDER', orderId });
   };
 
+  const getIntegrityColor = (integrity: number, maxIntegrity: number) => {
+    const ratio = integrity / maxIntegrity;
+    if (ratio >= 0.8) return 'text-green-400';
+    if (ratio >= 0.6) return 'text-emerald-400';
+    if (ratio >= 0.4) return 'text-yellow-400';
+    if (ratio >= 0.2) return 'text-orange-400';
+    return 'text-red-500';
+  };
+
+  const getTempColor = (temp: number, targetTemp: number, tolerance: number) => {
+    const diff = Math.abs(temp - targetTemp);
+    if (diff <= tolerance * 0.5) return 'text-cyan-400';
+    if (diff <= tolerance) return 'text-blue-400';
+    if (diff <= tolerance * 1.5) return 'text-yellow-400';
+    return 'text-red-500';
+  };
+
+  const getShockColor = (shock: number, maxShock: number) => {
+    const ratio = shock / maxShock;
+    if (ratio < 0.3) return 'text-green-400';
+    if (ratio < 0.6) return 'text-yellow-400';
+    if (ratio < 0.8) return 'text-orange-400';
+    return 'text-red-500';
+  };
+
   return (
     <div className="game-card p-4 w-80 space-y-4 max-h-[600px] flex flex-col">
       <h3 className="font-pixel text-sm text-game-neon glow-text">订单中心</h3>
 
       {currentOrder && (
-        <div className="bg-game-neon/10 border-2 border-game-neon rounded p-3 space-y-2">
+        <div className={`border-2 rounded p-3 space-y-2 ${
+          currentOrder.type === 'emergency'
+            ? 'bg-red-900/20 border-red-500'
+            : 'bg-game-neon/10 border-game-neon'
+        }`}>
           <div className="flex items-center justify-between">
-            <span className="font-pixel text-xs text-game-neon">当前订单</span>
+            <div className="flex items-center gap-2">
+              <span className={`font-pixel text-xs ${
+                currentOrder.type === 'emergency' ? 'text-red-400' : 'text-game-neon'
+              }`}>
+                {currentOrder.type === 'emergency' ? '🚑 医院急送' : '当前订单'}
+              </span>
+            </div>
             <span className={`font-retro text-xs px-2 py-0.5 rounded ${
               currentOrder.status === 'accepted' ? 'bg-blue-500/30 text-blue-400' :
               'bg-orange-500/30 text-orange-400'
@@ -75,6 +110,113 @@ export default function OrderPanel() {
               </div>
             </div>
 
+            {currentOrder.type === 'emergency' && currentOrder.medicalBox && (
+              <div className="bg-black/40 rounded p-2 space-y-2 border border-red-500/30">
+                <div className="flex items-center justify-between">
+                  <span className="font-retro text-xs text-gray-400">药品质量</span>
+                  <span
+                    className="font-retro text-xs font-bold"
+                    style={{ color: getQualityColor(currentOrder.medicalBox.quality) }}
+                  >
+                    {getQualityText(currentOrder.medicalBox.quality)}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Thermometer size={12} className={getTempColor(
+                        currentOrder.medicalBox.temperature,
+                        currentOrder.medicalBox.targetTemperature,
+                        currentOrder.medicalBox.temperatureTolerance
+                      )} />
+                      <span className="font-retro text-xs text-gray-400">药箱温度</span>
+                    </div>
+                    <span className={`font-retro text-xs ${getTempColor(
+                      currentOrder.medicalBox.temperature,
+                      currentOrder.medicalBox.targetTemperature,
+                      currentOrder.medicalBox.temperatureTolerance
+                    )}`}>
+                      {currentOrder.medicalBox.temperature.toFixed(1)}°C
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-1.5">
+                    <div
+                      className="h-1.5 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, (currentOrder.medicalBox.temperature / 15) * 100)}%`,
+                        backgroundColor: getTempColor(
+                          currentOrder.medicalBox.temperature,
+                          currentOrder.medicalBox.targetTemperature,
+                          currentOrder.medicalBox.temperatureTolerance
+                        ),
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Activity size={12} className={getShockColor(
+                        currentOrder.medicalBox.shockDamage,
+                        currentOrder.medicalBox.maxShockDamage
+                      )} />
+                      <span className="font-retro text-xs text-gray-400">震动损耗</span>
+                    </div>
+                    <span className={`font-retro text-xs ${getShockColor(
+                      currentOrder.medicalBox.shockDamage,
+                      currentOrder.medicalBox.maxShockDamage
+                    )}`}>
+                      {currentOrder.medicalBox.shockDamage.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-1.5">
+                    <div
+                      className="h-1.5 rounded-full transition-all"
+                      style={{
+                        width: `${currentOrder.medicalBox.shockDamage}%`,
+                        backgroundColor: getShockColor(
+                          currentOrder.medicalBox.shockDamage,
+                          currentOrder.medicalBox.maxShockDamage
+                        ),
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Shield size={12} className={getIntegrityColor(
+                        currentOrder.medicalBox.integrity,
+                        currentOrder.medicalBox.maxIntegrity
+                      )} />
+                      <span className="font-retro text-xs text-gray-400">完好度</span>
+                    </div>
+                    <span className={`font-retro text-xs ${getIntegrityColor(
+                      currentOrder.medicalBox.integrity,
+                      currentOrder.medicalBox.maxIntegrity
+                    )}`}>
+                      {currentOrder.medicalBox.integrity.toFixed(0)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-1.5">
+                    <div
+                      className="h-1.5 rounded-full transition-all"
+                      style={{
+                        width: `${currentOrder.medicalBox.integrity}%`,
+                        backgroundColor: getIntegrityColor(
+                          currentOrder.medicalBox.integrity,
+                          currentOrder.medicalBox.maxIntegrity
+                        ),
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {currentOrder.customerUrgency >= 4 && (
               <div className="flex items-center gap-1 bg-game-danger/20 rounded px-2 py-1">
                 <AlertTriangle size={12} className="text-game-danger" />
@@ -88,6 +230,9 @@ export default function OrderPanel() {
               {currentOrder.status === 'accepted' && '🎯 第一步：沿青色虚线路径开到绿色标记的取货点'}
               {currentOrder.status === 'pickedup' && '🎯 第二步：沿青色虚线路径开到红色标记的送货点'}
               {currentOrder.status === 'delivering' && '🎯 正在配送中，请沿路径行驶至送货点'}
+              {currentOrder.type === 'emergency' && currentOrder.status !== 'completed' && currentOrder.status !== 'failed' && (
+                <div className="mt-1 text-red-400">⚠️ 急送单请注意保持药品质量！</div>
+              )}
             </div>
           </div>
         </div>
@@ -108,14 +253,29 @@ export default function OrderPanel() {
           availableOrders.map((order) => (
             <div
               key={order.id}
-              className="bg-game-night/50 border border-gray-700 rounded p-3 hover:border-game-neon/50 transition-all space-y-2"
+              className={`border rounded p-3 hover:border-game-neon/50 transition-all space-y-2 ${
+                order.type === 'emergency'
+                  ? 'bg-red-900/20 border-red-500/50 hover:border-red-400'
+                  : 'bg-game-night/50 border-gray-700'
+              }`}
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-retro text-xs text-gray-400">
-                    {order.pickupLocation.name} → {order.deliveryLocation.name}
+                  <div className="flex items-center gap-1 mb-1">
+                    {order.type === 'emergency' && (
+                      <span className="font-retro text-[10px] text-red-400 bg-red-500/20 px-1.5 py-0.5 rounded">
+                        🚑 急送
+                      </span>
+                    )}
+                    <span className="font-retro text-xs text-gray-400">
+                      {order.pickupLocation.name} → {order.deliveryLocation.name}
+                    </span>
                   </div>
-                  <div className="font-retro text-lg text-game-streetLight">{formatMoney(order.reward)}</div>
+                  <div className={`font-retro text-lg ${
+                    order.type === 'emergency' ? 'text-red-400' : 'text-game-streetLight'
+                  }`}>
+                    {formatMoney(order.reward)}
+                  </div>
                 </div>
                 <span className={`font-retro text-xs ${getDeadlineColor(order.deadline, order.maxDeadline)}`}>
                   ⏱ {formatDeadline(order.deadline)}
@@ -132,9 +292,9 @@ export default function OrderPanel() {
                 <button
                   onClick={() => handleAcceptOrder(order.id)}
                   disabled={!!player.currentOrderId}
-                  className={`pixel-btn pixel-btn-success text-xs ${
-                    player.currentOrderId ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`pixel-btn text-xs ${
+                    order.type === 'emergency' ? 'pixel-btn-danger' : 'pixel-btn-success'
+                  } ${player.currentOrderId ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Check size={12} className="inline mr-1" />
                   接单

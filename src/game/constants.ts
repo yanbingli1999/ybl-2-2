@@ -68,3 +68,43 @@ export const BUILDING_NAMES = [
   '居民区', '商业中心', '工厂', '仓库', '办公楼',
   '酒店', '医院', '学校', '公园', '停车场',
 ];
+
+export const EMERGENCY_ORDER_CHANCE = 0.2;
+export const EMERGENCY_REWARD_MULTIPLIER = 2.0;
+export const EMERGENCY_DEADLINE_MULTIPLIER = 0.7;
+
+export const MEDICAL_BOX_TARGET_TEMP = 4;
+export const MEDICAL_BOX_TEMP_TOLERANCE = 3;
+export const MEDICAL_BOX_MAX_SHOCK_DAMAGE = 100;
+export const MEDICAL_BOX_MAX_INTEGRITY = 100;
+
+export const TEMP_RISE_RATE_SUNNY = 0.15;
+export const TEMP_RISE_RATE_CLOUDY = 0.1;
+export const TEMP_RISE_RATE_RAINY = 0.05;
+export const TEMP_RISE_RATE_HEAVY_RAIN = 0.02;
+export const TEMP_RISE_RATE_STORM = 0.08;
+
+export const SHOCK_DAMAGE_RATE_BASE = 0.08;
+export const SHOCK_DAMAGE_RATE_RAIN_MULTIPLIER = 1.5;
+export const SHOCK_DAMAGE_RATE_STORM_MULTIPLIER = 2.5;
+export const SHOCK_DAMAGE_LOW_DURABILITY_MULTIPLIER = 2.0;
+
+export const INTEGRITY_DECAY_RATE_BASE = 0.03;
+export const INTEGRITY_TEMP_PENALTY_MULTIPLIER = 3;
+export const INTEGRITY_SHOCK_PENALTY_MULTIPLIER = 2;
+export const INTEGRITY_DETOUR_PENALTY_RATE = 0.5;
+
+export const QUALITY_EXCELLENT_THRESHOLD = 80;
+export const QUALITY_GOOD_THRESHOLD = 60;
+export const QUALITY_ACCEPTABLE_THRESHOLD = 40;
+export const QUALITY_POOR_THRESHOLD = 20;
+
+export const QUALITY_BONUS_EXCELLENT = 0.3;
+export const QUALITY_BONUS_GOOD = 0.15;
+export const QUALITY_PENALTY_POOR = 0.3;
+export const QUALITY_PENALTY_SPOILED = 0.8;
+
+export const EMERGENCY_LOCATION_NAMES = [
+  '中心医院', '市立医院', '第一医院', '协和医院', '仁爱医院',
+  '检验科', '急诊中心', '血站', '疾控中心', '药房总部',
+];

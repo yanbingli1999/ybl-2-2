@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, selectCurrentOrder } from '../store/gameStore';
 import { GRID_SIZE } from '../game/constants';
 import { getRainParticleCount, isRaining } from '../game/WeatherSystem';
+import { getQualityColor } from '../game/OrderSystem';
 
 interface RainDrop {
   x: number;
@@ -58,6 +59,7 @@ export default function GameMap() {
       drawPlannedPath(ctx);
       drawVehicle(ctx);
       drawPlayer(ctx);
+      drawMedicalBoxStatus(ctx);
 
       if (isRaining(weather.type)) {
         drawRain(ctx);
@@ -187,53 +189,69 @@ export default function GameMap() {
       orders.forEach((order) => {
         if (order.status === 'available') {
           const pulse = Math.sin(timeRef.current * 2) * 0.5 + 0.5;
+          const isEmergency = order.type === 'emergency';
+          const color = isEmergency ? '#ff4757' : '#2ed573';
+          const icon = isEmergency ? '🚑' : '📦';
+
           ctx.beginPath();
           ctx.arc(order.pickupLocation.x, order.pickupLocation.y, 15 + pulse * 5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(46, 213, 115, ${0.2 + pulse * 0.2})`;
+          ctx.fillStyle = isEmergency
+            ? `rgba(255, 71, 87, ${0.2 + pulse * 0.2})`
+            : `rgba(46, 213, 115, ${0.2 + pulse * 0.2})`;
           ctx.fill();
           ctx.beginPath();
           ctx.arc(order.pickupLocation.x, order.pickupLocation.y, 12, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(46, 213, 115, 0.4)';
+          ctx.fillStyle = isEmergency ? 'rgba(255, 71, 87, 0.4)' : 'rgba(46, 213, 115, 0.4)';
           ctx.fill();
-          ctx.strokeStyle = '#2ed573';
+          ctx.strokeStyle = color;
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          ctx.fillStyle = '#2ed573';
+          ctx.fillStyle = color;
           ctx.font = 'bold 16px VT323';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('📦', order.pickupLocation.x, order.pickupLocation.y);
+          ctx.fillText(icon, order.pickupLocation.x, order.pickupLocation.y);
         }
       });
 
       if (currentOrder) {
         const pulse = Math.sin(timeRef.current * 3) * 0.5 + 0.5;
+        const isEmergency = currentOrder.type === 'emergency';
+        const pickupColor = isEmergency ? '#ff6b81' : '#2ed573';
+        const deliveryColor = isEmergency ? '#ff4757' : '#ff4757';
+        const pickupIcon = isEmergency ? '🏥' : '📍';
+        const deliveryIcon = isEmergency ? '🚑' : '🏠';
+
         if (currentOrder.status === 'accepted') {
           for (let i = 3; i > 0; i--) {
             ctx.beginPath();
             ctx.arc(currentOrder.pickupLocation.x, currentOrder.pickupLocation.y, 20 + i * 8 + pulse * 6, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(46, 213, 115, ${0.3 / i})`;
+            ctx.strokeStyle = isEmergency
+              ? `rgba(255, 107, 129, ${0.3 / i})`
+              : `rgba(46, 213, 115, ${0.3 / i})`;
             ctx.lineWidth = 3;
             ctx.stroke();
           }
           ctx.beginPath();
           ctx.arc(currentOrder.pickupLocation.x, currentOrder.pickupLocation.y, 22, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(46, 213, 115, ${0.4 + pulse * 0.2})`;
+          ctx.fillStyle = isEmergency
+            ? `rgba(255, 107, 129, ${0.4 + pulse * 0.2})`
+            : `rgba(46, 213, 115, ${0.4 + pulse * 0.2})`;
           ctx.fill();
-          ctx.strokeStyle = '#2ed573';
+          ctx.strokeStyle = pickupColor;
           ctx.lineWidth = 3;
           ctx.setLineDash([5, 5]);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          ctx.fillStyle = '#2ed573';
+          ctx.fillStyle = pickupColor;
           ctx.font = 'bold 22px VT323';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('📍', currentOrder.pickupLocation.x, currentOrder.pickupLocation.y);
+          ctx.fillText(pickupIcon, currentOrder.pickupLocation.x, currentOrder.pickupLocation.y);
 
-          ctx.fillStyle = '#2ed573';
+          ctx.fillStyle = pickupColor;
           ctx.font = 'bold 12px VT323';
           ctx.fillText(currentOrder.pickupLocation.name, currentOrder.pickupLocation.x, currentOrder.pickupLocation.y - 32);
         }
@@ -250,23 +268,56 @@ export default function GameMap() {
           ctx.arc(currentOrder.deliveryLocation.x, currentOrder.deliveryLocation.y, 22, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(255, 71, 87, ${0.4 + pulse * 0.2})`;
           ctx.fill();
-          ctx.strokeStyle = '#ff4757';
+          ctx.strokeStyle = deliveryColor;
           ctx.lineWidth = 3;
           ctx.setLineDash([5, 5]);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          ctx.fillStyle = '#ff4757';
+          ctx.fillStyle = deliveryColor;
           ctx.font = 'bold 22px VT323';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('🏠', currentOrder.deliveryLocation.x, currentOrder.deliveryLocation.y);
+          ctx.fillText(deliveryIcon, currentOrder.deliveryLocation.x, currentOrder.deliveryLocation.y);
 
-          ctx.fillStyle = '#ff4757';
+          ctx.fillStyle = deliveryColor;
           ctx.font = 'bold 12px VT323';
           ctx.fillText(currentOrder.deliveryLocation.name, currentOrder.deliveryLocation.x, currentOrder.deliveryLocation.y - 32);
         }
       }
+    };
+
+    const drawMedicalBoxStatus = (ctx: CanvasRenderingContext2D) => {
+      if (!currentOrder || currentOrder.type !== 'emergency' || !currentOrder.medicalBox) return;
+      if (currentOrder.status !== 'pickedup' && currentOrder.status !== 'delivering') return;
+
+      const { x, y } = vehicle.position;
+      const box = currentOrder.medicalBox;
+      const qualityColor = getQualityColor(box.quality);
+
+      ctx.save();
+      ctx.translate(x, y - 30);
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(-30, -10, 60, 20);
+      ctx.strokeStyle = qualityColor;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-30, -10, 60, 20);
+
+      ctx.fillStyle = qualityColor;
+      ctx.font = 'bold 11px VT323';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`💊 ${box.integrity.toFixed(0)}%`, 0, 0);
+
+      const tempColor = Math.abs(box.temperature - box.targetTemperature) <= box.temperatureTolerance
+        ? '#00ffcc'
+        : '#ff4757';
+      ctx.fillStyle = tempColor;
+      ctx.font = '9px VT323';
+      ctx.fillText(`${box.temperature.toFixed(1)}°C`, 0, 12);
+
+      ctx.restore();
     };
 
     const drawPlannedPath = (ctx: CanvasRenderingContext2D) => {

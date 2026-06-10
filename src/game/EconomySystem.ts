@@ -1,14 +1,40 @@
-import { Order, IncomeRecord } from './types';
+import { Order, IncomeRecord, MedicineQuality } from './types';
 import {
   LATE_PENALTY_RATE,
   EARLY_BONUS_RATE,
   URGENCY_BONUS_RATE,
+  QUALITY_BONUS_EXCELLENT,
+  QUALITY_BONUS_GOOD,
+  QUALITY_PENALTY_POOR,
+  QUALITY_PENALTY_SPOILED,
 } from './constants';
 
 export interface SettlementResult {
   record: IncomeRecord;
   rating: number;
   details: string[];
+}
+
+function getQualityBonus(quality: MedicineQuality, baseReward: number): number {
+  switch (quality) {
+    case 'excellent':
+      return Math.floor(baseReward * QUALITY_BONUS_EXCELLENT);
+    case 'good':
+      return Math.floor(baseReward * QUALITY_BONUS_GOOD);
+    default:
+      return 0;
+  }
+}
+
+function getQualityPenalty(quality: MedicineQuality, baseReward: number): number {
+  switch (quality) {
+    case 'poor':
+      return Math.floor(baseReward * QUALITY_PENALTY_POOR);
+    case 'spoiled':
+      return Math.floor(baseReward * QUALITY_PENALTY_SPOILED);
+    default:
+      return 0;
+  }
 }
 
 export function calculateSettlement(order: Order, playerStamina: number): SettlementResult {
@@ -46,14 +72,45 @@ export function calculateSettlement(order: Order, playerStamina: number): Settle
     details.push(`体力不足: -¥${staminaPenalty}`);
   }
 
-  let bonus = earlyBonus + urgencyBonus;
-  let finalAmount = baseReward - latePenalty - staminaPenalty + bonus;
+  let qualityBonus = 0;
+  let qualityPenalty = 0;
+  let medicineQuality: MedicineQuality | undefined;
+
+  if (order.type === 'emergency' && order.medicalBox) {
+    medicineQuality = order.medicalBox.quality;
+    qualityBonus = getQualityBonus(medicineQuality, baseReward);
+    qualityPenalty = getQualityPenalty(medicineQuality, baseReward);
+
+    if (qualityBonus > 0) {
+      const qualityNames: Record<MedicineQuality, string> = {
+        excellent: '药品优秀',
+        good: '药品良好',
+        acceptable: '',
+        poor: '',
+        spoiled: '',
+      };
+      details.push(`${qualityNames[medicineQuality] || '药品合格'}奖励: +¥${qualityBonus}`);
+    }
+    if (qualityPenalty > 0) {
+      const qualityNames: Record<MedicineQuality, string> = {
+        excellent: '',
+        good: '',
+        acceptable: '',
+        poor: '药品较差',
+        spoiled: '药品失效',
+      };
+      details.push(`${qualityNames[medicineQuality] || '药品不合格'}扣款: -¥${qualityPenalty}`);
+    }
+  }
+
+  const bonus = earlyBonus + urgencyBonus + qualityBonus;
+  let finalAmount = baseReward - latePenalty - staminaPenalty - qualityPenalty + bonus;
 
   if (finalAmount < 0) {
     finalAmount = 0;
   }
 
-  const rating = calculateRating(timeRatio, order.customerUrgency, latePenalty > 0, playerStamina);
+  const rating = calculateRating(timeRatio, order.customerUrgency, latePenalty > 0, playerStamina, order.type, medicineQuality);
   details.push(`客户评分: ${'⭐'.repeat(rating)}`);
 
   const finalDetails = details.join(' | ');
@@ -62,11 +119,15 @@ export function calculateSettlement(order: Order, playerStamina: number): Settle
     record: {
       id: `income-${Date.now()}`,
       orderId: order.id,
+      orderType: order.type,
       baseReward,
       latePenalty,
       bonus,
+      qualityPenalty,
+      qualityBonus,
       finalAmount,
       rating,
+      medicineQuality,
       completedAt: Date.now(),
       details: finalDetails,
     },
@@ -79,7 +140,9 @@ function calculateRating(
   timeRatio: number,
   urgency: number,
   isLate: boolean,
-  stamina: number
+  stamina: number,
+  orderType: string,
+  medicineQuality?: MedicineQuality
 ): number {
   let rating = 3;
 
@@ -101,6 +164,23 @@ function calculateRating(
     rating -= 1;
   } else if (stamina < 40) {
     rating -= 0.5;
+  }
+
+  if (orderType === 'emergency' && medicineQuality) {
+    switch (medicineQuality) {
+      case 'excellent':
+        rating += 1;
+        break;
+      case 'good':
+        rating += 0.5;
+        break;
+      case 'poor':
+        rating -= 1;
+        break;
+      case 'spoiled':
+        rating -= 2;
+        break;
+    }
   }
 
   rating = Math.max(1, Math.min(5, rating));
