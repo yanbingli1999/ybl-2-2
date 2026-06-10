@@ -133,24 +133,49 @@ export default function OrderPanel() {
                       )} />
                       <span className="font-retro text-xs text-gray-400">药箱温度</span>
                     </div>
-                    <span className={`font-retro text-xs ${getTempColor(
-                      currentOrder.medicalBox.temperature,
-                      currentOrder.medicalBox.targetTemperature,
-                      currentOrder.medicalBox.temperatureTolerance
-                    )}`}>
-                      {currentOrder.medicalBox.temperature.toFixed(1)}°C
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-retro text-[10px] text-cyan-400">
+                        安全线 {currentOrder.medicalBox.targetTemperature}~{(currentOrder.medicalBox.targetTemperature + currentOrder.medicalBox.temperatureTolerance).toFixed(0)}°C
+                      </span>
+                      <span className={`font-retro text-xs ${getTempColor(
+                        currentOrder.medicalBox.temperature,
+                        currentOrder.medicalBox.targetTemperature,
+                        currentOrder.medicalBox.temperatureTolerance
+                      )}`}>
+                        {currentOrder.medicalBox.temperature.toFixed(1)}°C
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-1.5">
+                  <div className="relative w-full h-3 rounded-full overflow-hidden bg-gray-700">
                     <div
-                      className="h-1.5 rounded-full transition-all"
+                      className="absolute inset-y-0 left-0 bg-cyan-400/30 rounded-l-full"
+                      style={{ width: `${(currentOrder.medicalBox.targetTemperature / 28) * 100}%` }}
+                    />
+                    <div
+                      className="absolute inset-y-0 bg-yellow-400/30"
                       style={{
-                        width: `${Math.min(100, (currentOrder.medicalBox.temperature / 15) * 100)}%`,
+                        left: `${(currentOrder.medicalBox.targetTemperature / 28) * 100}%`,
+                        width: `${(currentOrder.medicalBox.temperatureTolerance / 28) * 100}%`,
+                      }}
+                    />
+                    <div
+                      className="absolute inset-y-0 bg-red-500/30"
+                      style={{
+                        left: `${((currentOrder.medicalBox.targetTemperature + currentOrder.medicalBox.temperatureTolerance) / 28) * 100}%`,
+                        right: 0,
+                      }}
+                    />
+                    <div
+                      className="absolute inset-y-0 rounded-full transition-all duration-300"
+                      style={{
+                        left: 0,
+                        width: `${Math.min(100, (currentOrder.medicalBox.temperature / 28) * 100)}%`,
                         backgroundColor: getTempColor(
                           currentOrder.medicalBox.temperature,
                           currentOrder.medicalBox.targetTemperature,
                           currentOrder.medicalBox.temperatureTolerance
                         ),
+                        opacity: 0.85,
                       }}
                     />
                   </div>
