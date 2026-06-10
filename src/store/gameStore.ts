@@ -222,9 +222,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (currentOrderForBox && currentOrderForBox.type === 'emergency' && currentOrderForBox.medicalBox) {
         const isMoving = newState.vehicle.speed > 0;
         const isDelivering = currentOrderForBox.status === 'pickedup' || currentOrderForBox.status === 'delivering';
-        const isPickingUp = currentOrderForBox.status === 'accepted';
 
-        if (isDelivering || isPickingUp) {
+        if (isDelivering) {
           const elapsedRatio = 1 - (currentOrderForBox.deadline / currentOrderForBox.maxDeadline);
           const detourFactor = 1 + Math.max(0, elapsedRatio - 0.5) * 0.5;
 

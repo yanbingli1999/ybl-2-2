@@ -65,6 +65,8 @@ function getTempRiseRate(weatherType: string): number {
   }
 }
 
+const MAX_AMBIENT_TEMP = 28;
+
 export function updateMedicalBox(
   box: MedicalBoxState,
   weather: WeatherState,
@@ -78,10 +80,16 @@ export function updateMedicalBox(
   let newIntegrity = box.integrity;
 
   const tempRiseRate = getTempRiseRate(weather.type);
-  const tempDiff = Math.abs(newTemperature - box.targetTemperature);
 
-  if (newTemperature < box.targetTemperature + box.temperatureTolerance) {
-    newTemperature += tempRiseRate * deltaTime * (weather.intensity / 50 + 0.5);
+  if (newTemperature < MAX_AMBIENT_TEMP) {
+    const tempDiffFromTarget = Math.abs(newTemperature - box.targetTemperature);
+    let effectiveRate = tempRiseRate * (weather.intensity / 50 + 0.5);
+
+    if (tempDiffFromTarget > box.temperatureTolerance) {
+      effectiveRate *= 0.5;
+    }
+
+    newTemperature = Math.min(MAX_AMBIENT_TEMP, newTemperature + effectiveRate * deltaTime);
   }
 
   if (isMoving) {
@@ -102,7 +110,8 @@ export function updateMedicalBox(
 
   let integrityDecay = INTEGRITY_DECAY_RATE_BASE * deltaTime;
 
-  const tempExcess = Math.max(0, tempDiff - box.temperatureTolerance);
+  const newTempDiff = Math.abs(newTemperature - box.targetTemperature);
+  const tempExcess = Math.max(0, newTempDiff - box.temperatureTolerance);
   if (tempExcess > 0) {
     integrityDecay += tempExcess * INTEGRITY_TEMP_PENALTY_MULTIPLIER * deltaTime;
   }

@@ -110,7 +110,8 @@ export default function OrderPanel() {
               </div>
             </div>
 
-            {currentOrder.type === 'emergency' && currentOrder.medicalBox && (
+            {currentOrder.type === 'emergency' && currentOrder.medicalBox &&
+              (currentOrder.status === 'pickedup' || currentOrder.status === 'delivering') && (
               <div className="bg-black/40 rounded p-2 space-y-2 border border-red-500/30">
                 <div className="flex items-center justify-between">
                   <span className="font-retro text-xs text-gray-400">药品质量</span>
@@ -227,11 +228,14 @@ export default function OrderPanel() {
             )}
 
             <div className="text-xs font-retro text-gray-400 mt-2 p-2 bg-game-night/70 rounded border border-game-neon/30">
-              {currentOrder.status === 'accepted' && '🎯 第一步：沿青色虚线路径开到绿色标记的取货点'}
-              {currentOrder.status === 'pickedup' && '🎯 第二步：沿青色虚线路径开到红色标记的送货点'}
+              {currentOrder.status === 'accepted' && '🎯 第一步：沿青色虚线路径开到标记的取货点'}
+              {currentOrder.status === 'pickedup' && '🎯 第二步：沿青色虚线路径开到标记的送货点'}
               {currentOrder.status === 'delivering' && '🎯 正在配送中，请沿路径行驶至送货点'}
-              {currentOrder.type === 'emergency' && currentOrder.status !== 'completed' && currentOrder.status !== 'failed' && (
-                <div className="mt-1 text-red-400">⚠️ 急送单请注意保持药品质量！</div>
+              {currentOrder.type === 'emergency' && currentOrder.status === 'accepted' && (
+                <div className="mt-1 text-red-400">⚠️ 急送单：取货后药箱状态将开始变化！</div>
+              )}
+              {(currentOrder.status === 'pickedup' || currentOrder.status === 'delivering') && currentOrder.type === 'emergency' && (
+                <div className="mt-1 text-red-400">⚠️ 急送配送中！暴雨、颠簸、绕路都会降低完好度</div>
               )}
             </div>
           </div>
